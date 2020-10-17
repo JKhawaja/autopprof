@@ -134,12 +134,20 @@ func Capture(p Profile) {
 
 func capture(p Profile) {
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGQUIT)
+	switch runtime.GOOS {
+	case "windows":
+		signal.Notify(c, os.Interrupt)
+	default:
+		signal.Notify(c, syscall.SIGQUIT)
+	}
 
-	fmt.Println("Send SIGQUIT (CTRL+\\) to the process to capture...")
+	fmt.Println("Send SIGQUIT (CTRL+\\) or (CTRL+BREAK on Windows) to the process to capture...")
 
 	for {
-		<-c
+		sig := <-c
+		if runtime.GOOS == "windows" && sig == syscall.SIGTERM {
+			os.Exit(0)
+		}
 		log.Println("Starting to capture.")
 
 		profile, err := p.Capture()
